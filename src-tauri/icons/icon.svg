@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Curly braces representing API/JSON -->
+  <text x="256" y="300" text-anchor="middle" font-family="monospace" font-weight="bold" font-size="280" fill="white" opacity="0.15">{}</text>
+  <!-- Stylized "API" text -->
+  <text x="256" y="240" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="160" fill="white" letter-spacing="-8">API</text>
+  <!-- Pencil/edit line underneath -->
+  <line x1="120" y1="320" x2="392" y2="320" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+  <!-- Three horizontal lines representing spec fields -->
+  <line x1="150" y1="360" x2="362" y2="360" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.35"/>
+  <line x1="150" y1="390" x2="310" y2="390" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.25"/>
+  <line x1="150" y1="420" x2="340" y2="420" stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.15"/>
+</svg>

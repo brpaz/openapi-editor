@@ -1,0 +1,118 @@
+version: "3"
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list-all
+
+  dev:
+    desc: Start Tauri development server with hot reload
+    cmds:
+      - npm run tauri dev
+
+  dev:web:
+    desc: Start Vite dev server only (no Tauri window)
+    cmds:
+      - npm run dev
+
+  check:
+    desc: Run all checks (lint, type-check, test)
+    cmds:
+      - task: lint
+      - task: typecheck
+      - task: test
+
+  lint:
+    desc: Run ESLint on src/
+    cmds:
+      - npm run lint
+
+  lint:fix:
+    desc: Run ESLint with auto-fix
+    cmds:
+      - npx eslint src/ --fix
+
+  typecheck:
+    desc: Run TypeScript type checking
+    cmds:
+      - npx tsc --noEmit
+
+  test:
+    desc: Run tests once
+    cmds:
+      - npm test
+
+  test:watch:
+    desc: Run tests in watch mode
+    cmds:
+      - npx vitest
+
+  test:coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - npx vitest run --coverage
+
+  build:
+    desc: Build the Tauri application for the current platform
+    cmds:
+      - npm run tauri build
+
+  build:web:
+    desc: Build the frontend only
+    cmds:
+      - npm run build
+
+  build:debug:
+    desc: Build the Tauri application in debug mode
+    cmds:
+      - npm run tauri build -- --debug
+
+  icons:
+    desc: Regenerate app icons from SVG source
+    deps:
+      - icons:render
+    cmds:
+      - npx tauri icon /tmp/openapi-icon-1024.png
+
+  icons:render:
+    desc: Render icon SVG to 1024x1024 PNG (requires Inkscape)
+    cmds:
+      - inkscape --export-type=png --export-filename=/tmp/openapi-icon-1024.png --export-width=1024 --export-height=1024 src-tauri/icons/icon.svg
+    preconditions:
+      - sh: command -v inkscape
+        msg: Inkscape is required to render the SVG icon
+
+  release:tag:
+    desc: "Create and push a release tag (usage: task release:tag -- v0.1.0)"
+    cmds:
+      - git tag "{{.CLI_ARGS}}"
+      - git push origin "{{.CLI_ARGS}}"
+    preconditions:
+      - sh: "test -n '{{.CLI_ARGS}}'"
+        msg: "Usage: task release:tag -- v0.1.0"
+      - sh: git diff --quiet HEAD
+        msg: Working tree must be clean before tagging a release
+
+  install:
+    desc: Install all dependencies (npm + cargo)
+    cmds:
+      - npm ci
+      - cargo fetch --manifest-path src-tauri/Cargo.toml
+
+  update:
+    desc: Update npm dependencies
+    cmds:
+      - npm update
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf dist
+      - rm -rf src-tauri/target
+
+  clean:node:
+    desc: Remove node_modules and reinstall
+    cmds:
+      - rm -rf node_modules
+      - npm ci

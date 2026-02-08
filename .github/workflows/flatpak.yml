@@ -1,0 +1,70 @@
+name: Flatpak
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flatpak:
+    name: Build Flatpak Bundle
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Flatpak and flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47
+
+      - name: Download Linux binary from release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ASSET_PATTERN="openapi-editor_${VERSION}_amd64.deb"
+          gh release download "$GITHUB_REF_NAME" --pattern "*.deb" --dir /tmp/release || true
+          DEB_FILE=$(find /tmp/release -name '*.deb' | head -1)
+          if [ -z "$DEB_FILE" ]; then
+            echo "No .deb found, trying AppImage..."
+            gh release download "$GITHUB_REF_NAME" --pattern "*AppImage" --dir /tmp/release
+            APPIMAGE=$(find /tmp/release -name '*AppImage' | head -1)
+            chmod +x "$APPIMAGE"
+            "$APPIMAGE" --appimage-extract
+            cp squashfs-root/usr/bin/openapi-editor flatpak/openapi-editor
+          else
+            dpkg-deb -x "$DEB_FILE" /tmp/extracted
+            cp /tmp/extracted/usr/bin/openapi-editor flatpak/openapi-editor
+          fi
+          chmod +x flatpak/openapi-editor
+
+      - name: Copy icons
+        run: |
+          cp src-tauri/icons/128x128.png flatpak/icon-128x128.png
+          cp src-tauri/icons/128x128@2x.png flatpak/icon-256x256.png
+
+      - name: Build Flatpak
+        working-directory: flatpak
+        run: |
+          flatpak-builder --force-clean --repo=repo build com.bruno.openapi-editor.yml
+          flatpak build-bundle repo openapi-editor.flatpak com.bruno.openapi-editor
+
+      - name: Upload Flatpak to release
+        if: github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" flatpak/openapi-editor.flatpak --clobber
+
+      - name: Upload Flatpak artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-editor-flatpak
+          path: flatpak/openapi-editor.flatpak
