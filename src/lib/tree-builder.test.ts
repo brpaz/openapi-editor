@@ -47,16 +47,18 @@ describe("buildTree", () => {
   });
 
   describe("servers", () => {
-    it("should not include servers section when servers is empty", () => {
+    it("should include servers section even when servers is empty", () => {
       const nodes = buildTree(minimalSpec({ servers: [] }));
-      const serverSection = nodes.find((n) => n.type === "servers");
-      expect(serverSection).toBeUndefined();
+      const section = findNode(nodes, "servers");
+      expect(section.label).toBe("Servers");
+      expect(section.children).toHaveLength(0);
     });
 
-    it("should not include servers section when servers is absent", () => {
+    it("should include servers section even when servers is absent", () => {
       const nodes = buildTree(minimalSpec());
-      const serverSection = nodes.find((n) => n.type === "servers");
-      expect(serverSection).toBeUndefined();
+      const section = findNode(nodes, "servers");
+      expect(section.label).toBe("Servers");
+      expect(section.children).toHaveLength(0);
     });
 
     it("should build servers section with children", () => {
@@ -90,16 +92,18 @@ describe("buildTree", () => {
   });
 
   describe("tags", () => {
-    it("should not include tags section when tags is absent", () => {
+    it("should include tags section even when tags is absent", () => {
       const nodes = buildTree(minimalSpec());
-      const tagSection = nodes.find((n) => n.type === "tags");
-      expect(tagSection).toBeUndefined();
+      const section = findNode(nodes, "tags");
+      expect(section.label).toBe("Tags");
+      expect(section.children).toHaveLength(0);
     });
 
-    it("should not include tags section when tags is empty", () => {
+    it("should include tags section even when tags is empty", () => {
       const nodes = buildTree(minimalSpec({ tags: [] }));
-      const tagSection = nodes.find((n) => n.type === "tags");
-      expect(tagSection).toBeUndefined();
+      const section = findNode(nodes, "tags");
+      expect(section.label).toBe("Tags");
+      expect(section.children).toHaveLength(0);
     });
 
     it("should build tags section with children", () => {
@@ -129,16 +133,18 @@ describe("buildTree", () => {
   });
 
   describe("paths", () => {
-    it("should not include paths section when paths is absent", () => {
+    it("should include paths section even when paths is absent", () => {
       const nodes = buildTree(minimalSpec());
-      const pathsSection = nodes.find((n) => n.type === "paths");
-      expect(pathsSection).toBeUndefined();
+      const section = findNode(nodes, "paths");
+      expect(section.label).toBe("Paths");
+      expect(section.children).toHaveLength(0);
     });
 
-    it("should not include paths section when paths is empty", () => {
+    it("should include paths section even when paths is empty", () => {
       const nodes = buildTree(minimalSpec({ paths: {} }));
-      const pathsSection = nodes.find((n) => n.type === "paths");
-      expect(pathsSection).toBeUndefined();
+      const section = findNode(nodes, "paths");
+      expect(section.label).toBe("Paths");
+      expect(section.children).toHaveLength(0);
     });
 
     it("should build paths with operation children", () => {
@@ -252,12 +258,16 @@ describe("buildTree", () => {
   });
 
   describe("components", () => {
-    it("should not include component sections when components is absent", () => {
+    it("should include component sections even when components is absent", () => {
       const nodes = buildTree(minimalSpec());
-      const schemas = nodes.find((n) => n.type === "schemas");
-      const responses = nodes.find((n) => n.type === "responses");
-      expect(schemas).toBeUndefined();
-      expect(responses).toBeUndefined();
+      const schemas = findNode(nodes, "schemas");
+      const responses = findNode(nodes, "responses");
+      const parameters = findNode(nodes, "parameters");
+      const requestBodies = findNode(nodes, "requestBodies");
+      expect(schemas.children).toHaveLength(0);
+      expect(responses.children).toHaveLength(0);
+      expect(parameters.children).toHaveLength(0);
+      expect(requestBodies.children).toHaveLength(0);
     });
 
     it("should build schemas section", () => {
@@ -332,7 +342,7 @@ describe("buildTree", () => {
       expect(section.children[0].type).toBe("requestBody");
     });
 
-    it("should skip empty component sub-sections", () => {
+    it("should show empty component sub-sections with no children", () => {
       const nodes = buildTree(
         minimalSpec({
           components: {
@@ -341,10 +351,10 @@ describe("buildTree", () => {
           },
         }),
       );
-      const schemas = nodes.find((n) => n.type === "schemas");
-      const responses = nodes.find((n) => n.type === "responses");
-      expect(schemas).toBeUndefined();
-      expect(responses).toBeUndefined();
+      const schemas = findNode(nodes, "schemas");
+      const responses = findNode(nodes, "responses");
+      expect(schemas.children).toHaveLength(0);
+      expect(responses.children).toHaveLength(0);
     });
   });
 
@@ -461,11 +471,21 @@ describe("buildTree", () => {
   });
 
   describe("minimal spec", () => {
-    it("should produce only info node for a minimal spec", () => {
+    it("should produce all section nodes for a minimal spec", () => {
       const nodes = buildTree(minimalSpec());
-      expect(nodes).toHaveLength(1);
-      expect(nodes[0].type).toBe("info");
+      const types = nodes.map((n) => n.type);
+      expect(types).toEqual([
+        "info",
+        "servers",
+        "tags",
+        "paths",
+        "schemas",
+        "responses",
+        "parameters",
+        "requestBodies",
+      ]);
       expect(nodes[0].label).toBe("Test API");
+      expect(nodes.slice(1).every((n) => n.children.length === 0)).toBe(true);
     });
   });
 });

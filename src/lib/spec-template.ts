@@ -3,4 +3,5 @@ info:
   title: My API
   version: 0.1.0
 paths: {}
+components: {}
 `;
