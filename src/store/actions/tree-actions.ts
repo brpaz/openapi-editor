@@ -69,11 +69,10 @@ export function addServerAction(): void {
   const store = useSpecStore.getState();
   if (!store.spec) return;
 
-  const servers = store.spec.servers ?? [];
+  const servers = Array.isArray(store.spec.servers) ? store.spec.servers : [];
+  const newServer = { url: "https://api.example.com" };
   const index = servers.length;
-  store.updateField(["servers", index.toString()], {
-    url: "https://api.example.com",
-  });
+  store.updateField(["servers"], [...servers, newServer]);
   store.setSelectedPath(["servers", index.toString()]);
 }
 
@@ -81,9 +80,9 @@ export function addTagAction(name: string): void {
   const store = useSpecStore.getState();
   if (!store.spec) return;
 
-  const tags = store.spec.tags ?? [];
+  const tags = Array.isArray(store.spec.tags) ? store.spec.tags : [];
   const index = tags.length;
-  store.updateField(["tags", index.toString()], { name });
+  store.updateField(["tags"], [...tags, { name }]);
   store.setSelectedPath(["tags", index.toString()]);
 }
 

@@ -109,7 +109,7 @@ export function TagsListPanel() {
     if (!name) return;
     const tags = getTags(spec);
     const index = tags.length;
-    updateField(["tags", index.toString()], { name });
+    updateField(["tags"], [...tags, { name }]);
     setSelectedPath(["tags", index.toString()]);
   }, [spec, updateField, setSelectedPath]);
 

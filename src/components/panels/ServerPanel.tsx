@@ -109,9 +109,7 @@ export function ServersListPanel() {
     if (!spec) return;
     const servers = getServers(spec);
     const index = servers.length;
-    updateField(["servers", index.toString()], {
-      url: "https://api.example.com",
-    });
+    updateField(["servers"], [...servers, { url: "https://api.example.com" }]);
     setSelectedPath(["servers", index.toString()]);
   }, [spec, updateField, setSelectedPath]);
 
