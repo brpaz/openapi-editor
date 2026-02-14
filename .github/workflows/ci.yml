@@ -44,12 +44,15 @@ jobs:
     permissions:
       contents: write
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
-          - name: macOS (Universal)
+          - name: macOS (ARM64)
             platform: macos-latest
-            args: "--target aarch64-apple-darwin --target x86_64-apple-darwin"
+            args: ""
+          - name: macOS (x86_64)
+            platform: macos-13
+            args: ""
           - name: Linux (x86_64)
             platform: ubuntu-24.04
             args: ""
@@ -70,8 +73,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -108,27 +109,23 @@ jobs:
             src-tauri/target/release/bundle/appimage/*.AppImage
 
       - name: Upload macOS artifacts to release
-        if: matrix.platform == 'macos-latest' && github.event_name == 'release'
+        if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-13') && github.event_name == 'release'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$GITHUB_REF_NAME" \
-            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg \
-            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg \
-            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz \
-            src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz \
+            src-tauri/target/release/bundle/dmg/*.dmg \
+            src-tauri/target/release/bundle/macos/*.app.tar.gz \
             --clobber
 
       - name: Upload macOS artifacts
-        if: matrix.platform == 'macos-latest' && github.event_name != 'release'
+        if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-13') && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: macos-bundles
+          name: macos-${{ matrix.platform }}-bundles
           path: |
-            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
-            src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.app.tar.gz
 
       - name: Upload Windows artifacts to release
         if: matrix.platform == 'windows-latest' && github.event_name == 'release'
