@@ -8,6 +8,9 @@
   Built with [Tauri 2](https://v2.tauri.app/), React 19, and Tailwind CSS v4.
 </div>
 
+[!WARNING]
+This software was vibe coded in a weekend to solve a personal itch. Use at your own risk.
+
 ## Features
 
 - Form-based editing for all OpenAPI 3.1 elements (paths, operations, schemas, responses, parameters, request bodies)
