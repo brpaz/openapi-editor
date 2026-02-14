@@ -1,0 +1,19 @@
+[Application]
+name=dev.brunopaz.openapi-editor
+runtime=org.gnome.Platform/x86_64/49
+sdk=org.gnome.Sdk/x86_64/49
+command=openapi-editor
+
+[Context]
+shared=network;ipc;
+sockets=x11;wayland;fallback-x11;
+devices=dri;
+filesystems=home;
+
+[Extension dev.brunopaz.openapi_editor.Debug]
+directory=lib/debug
+autodelete=true
+no-autodownload=true
+
+[Build]
+built-extensions=dev.brunopaz.openapi_editor.Debug;

@@ -9,12 +9,12 @@ tasks:
   dev:
     desc: Start Tauri development server with hot reload
     cmds:
-      - npm run tauri dev
+      - pnpm run tauri dev
 
   dev:web:
     desc: Start Vite dev server only (no Tauri window)
     cmds:
-      - npm run dev
+      - pnpm run dev
 
   check:
     desc: Run all checks (lint, type-check, test)
@@ -26,54 +26,83 @@ tasks:
   lint:
     desc: Run ESLint on src/
     cmds:
-      - npm run lint
+      - pnpm run lint
 
   lint:fix:
     desc: Run ESLint with auto-fix
     cmds:
-      - npx eslint src/ --fix
+      - pnpm exec eslint src/ --fix
 
   typecheck:
     desc: Run TypeScript type checking
     cmds:
-      - npx tsc --noEmit
+      - pnpm exec tsc --noEmit
 
   test:
     desc: Run tests once
     cmds:
-      - npm test
+      - pnpm test
 
   test:watch:
     desc: Run tests in watch mode
     cmds:
-      - npx vitest
+      - pnpm exec vitest
 
   test:coverage:
     desc: Run tests with coverage report
     cmds:
-      - npx vitest run --coverage
+      - pnpm exec vitest run --coverage
 
-  build:
+  bundle:
     desc: Build the Tauri application for the current platform
     cmds:
-      - npm run tauri build
+      - pnpm run tauri build
+
+  build:
+    desc: Build the Tauri application for the current platform as a binary
+    cmds:
+      - pnpm run tauri build --no-bundle
 
   build:web:
     desc: Build the frontend only
     cmds:
-      - npm run build
+      - pnpm run build
 
   build:debug:
     desc: Build the Tauri application in debug mode
     cmds:
-      - npm run tauri build -- --debug
+      - pnpm run tauri build -- --debug
+
+  build:flatpak:
+    desc: Build Tauri app then package as Flatpak bundle
+    deps:
+      - build
+    preconditions:
+      - sh: command -v flatpak-builder
+        msg: flatpak-builder is required. Install with 'sudo apt install flatpak-builder'
+    generates:
+      - flatpak/openapi-editor.flatpak
+      - flatpak/repo
+    cmds:
+      - cp src-tauri/target/release/openapi-editor flatpak/openapi-editor
+      - cp src-tauri/icons/128x128.png flatpak/icon-128x128.png
+      - cp src-tauri/icons/128x128@2x.png flatpak/icon-256x256.png
+      - flatpak-builder --force-clean --repo=flatpak/repo flatpak/build flatpak/dev.brunopaz.openapi-editor.yml
+      - flatpak build-bundle flatpak/repo flatpak/openapi-editor.flatpak dev.brunopaz.openapi-editor
+
+  flatpak:install:
+    desc: Run the Flatpak bundle
+    deps:
+      - build:flatpak
+    cmds:
+      - flatpak install flatpak/openapi-editor.flatpak
 
   icons:
     desc: Regenerate app icons from SVG source
     deps:
       - icons:render
     cmds:
-      - npx tauri icon /tmp/openapi-icon-1024.png
+      - pnpm exec tauri icon /tmp/openapi-icon-1024.png
 
   icons:render:
     desc: Render icon SVG to 1024x1024 PNG (requires Inkscape)
@@ -83,27 +112,11 @@ tasks:
       - sh: command -v inkscape
         msg: Inkscape is required to render the SVG icon
 
-  release:tag:
-    desc: "Create and push a release tag (usage: task release:tag -- v0.1.0)"
-    cmds:
-      - git tag "{{.CLI_ARGS}}"
-      - git push origin "{{.CLI_ARGS}}"
-    preconditions:
-      - sh: "test -n '{{.CLI_ARGS}}'"
-        msg: "Usage: task release:tag -- v0.1.0"
-      - sh: git diff --quiet HEAD
-        msg: Working tree must be clean before tagging a release
-
   install:
-    desc: Install all dependencies (npm + cargo)
+    desc: Install all dependencies (pnpm + cargo)
     cmds:
-      - npm ci
+      - pnpm install --frozen-lockfile
       - cargo fetch --manifest-path src-tauri/Cargo.toml
-
-  update:
-    desc: Update npm dependencies
-    cmds:
-      - npm update
 
   clean:
     desc: Remove build artifacts
@@ -115,4 +128,4 @@ tasks:
     desc: Remove node_modules and reinstall
     cmds:
       - rm -rf node_modules
-      - npm ci
+      - pnpm install --frozen-lockfile

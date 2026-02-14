@@ -35,5 +35,10 @@ devenv.local.yaml
 # direnv
 .direnv
 
-# pre-commit
-.pre-commit-config.yaml
+# Binary
+openapi-editor
+
+# Flatpak
+flatpak/build
+flatpak/repo
+*.flatpak
