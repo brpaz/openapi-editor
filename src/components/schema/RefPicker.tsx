@@ -4,7 +4,7 @@ import { useSpecStore } from "../../store/spec-store";
 interface RefPickerProps {
   value: string;
   onChange: (ref: string) => void;
-  section?: "schemas" | "responses" | "parameters" | "requestBodies";
+  section?: "schemas" | "responses" | "parameters" | "requestBodies" | "examples";
   className?: string;
 }
 

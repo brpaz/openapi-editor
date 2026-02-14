@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { stringify, parse } from "yaml";
 import FormField from "./FormField";
 import { usePromptDialog } from "./PromptDialog";
+import RefPicker from "../schema/RefPicker";
 
 interface ExampleObject {
   summary?: string;
@@ -10,8 +11,10 @@ interface ExampleObject {
   externalValue?: string;
 }
 
+type ExampleOrRef = ExampleObject | { $ref: string };
+
 interface ExamplesEditorProps {
-  examples: Record<string, ExampleObject>;
+  examples: Record<string, ExampleOrRef>;
   basePath: string[];
   onUpdate: (path: string[], value: unknown) => void;
 }
@@ -44,19 +47,22 @@ function ExampleItem({
   onRename,
 }: {
   name: string;
-  example: ExampleObject;
+  example: ExampleOrRef;
   basePath: string[];
   onUpdate: (path: string[], value: unknown) => void;
   onRemove: () => void;
   onRename: (newName: string) => void;
 }) {
+  const isRef = "$ref" in example;
   const [expanded, setExpanded] = useState(true);
+  const [mode, setMode] = useState<"inline" | "ref">(isRef ? "ref" : "inline");
+  const exampleObj = isRef ? ({} as ExampleObject) : example;
   const [valueText, setValueText] = useState(() =>
-    serializeValue(example.value),
+    isRef ? "" : serializeValue(exampleObj.value),
   );
   const [nameInput, setNameInput] = useState(name);
   const [editing, setEditing] = useState(false);
-  const useExternalValue = example.externalValue !== undefined;
+  const useExternalValue = !isRef && exampleObj.externalValue !== undefined;
 
   const handleSummaryChange = useCallback(
     (v: string | number | boolean) => {
@@ -104,6 +110,38 @@ function ExampleItem({
       setValueText("");
     }
   }, [basePath, name, onUpdate, useExternalValue]);
+
+  const handleModeChange = useCallback(
+    (newMode: "inline" | "ref") => {
+      if (newMode === "ref") {
+        onUpdate([...basePath, name], { $ref: "" });
+      } else {
+        onUpdate([...basePath, name], {
+          summary: "",
+          value: {},
+        });
+        setValueText("{}");
+      }
+      setMode(newMode);
+    },
+    [basePath, name, onUpdate],
+  );
+
+  const handleRefChange = useCallback(
+    (ref: string) => {
+      if (ref) {
+        onUpdate([...basePath, name], { $ref: ref });
+      } else {
+        onUpdate([...basePath, name], {
+          summary: "",
+          value: {},
+        });
+        setValueText("{}");
+        setMode("inline");
+      }
+    },
+    [basePath, name, onUpdate],
+  );
 
   const handleNameSubmit = useCallback(() => {
     const trimmed = nameInput.trim();
@@ -167,83 +205,119 @@ function ExampleItem({
 
       {expanded && (
         <div className="space-y-3 p-3">
-          <FormField
-            label="Summary"
-            value={typeof example.summary === "string" ? example.summary : ""}
-            onChange={handleSummaryChange}
-            placeholder="Short description of the example"
-          />
-
-          <FormField
-            label="Description"
-            value={
-              typeof example.description === "string"
-                ? example.description
-                : ""
-            }
-            onChange={handleDescriptionChange}
-            type="textarea"
-            placeholder="Detailed description"
-          />
-
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Source:
-            </label>
+          <div className="flex items-center gap-2 border-b border-gray-100 pb-2 dark:border-gray-700">
             <button
               type="button"
-              onClick={handleToggleMode}
-              className={`rounded-l px-2 py-0.5 text-xs font-medium ${
-                !useExternalValue
-                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+              onClick={() => handleModeChange("inline")}
+              className={`text-xs font-medium ${
+                mode === "inline"
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               }`}
             >
-              Inline Value
+              Inline
             </button>
+            <span className="text-xs text-gray-300 dark:text-gray-600">|</span>
             <button
               type="button"
-              onClick={handleToggleMode}
-              className={`rounded-r px-2 py-0.5 text-xs font-medium ${
-                useExternalValue
-                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+              onClick={() => handleModeChange("ref")}
+              className={`text-xs font-medium ${
+                mode === "ref"
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               }`}
             >
-              External URL
+              $ref
             </button>
           </div>
 
-          {useExternalValue ? (
-            <FormField
-              label="External Value URL"
-              value={
-                typeof example.externalValue === "string"
-                  ? example.externalValue
-                  : ""
-              }
-              onChange={handleExternalValueChange}
-              type="url"
-              placeholder="https://example.com/example.json"
+          {mode === "ref" ? (
+            <RefPicker
+              value={"$ref" in example ? example.$ref : ""}
+              onChange={handleRefChange}
+              section="examples"
             />
           ) : (
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Value (YAML)
-              </label>
-              <textarea
-                value={valueText}
-                onChange={(e) => setValueText(e.target.value)}
-                onBlur={handleValueBlur}
-                rows={6}
-                spellCheck={false}
-                className="w-full resize-y rounded border border-gray-300 bg-white px-3 py-1.5 font-mono text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
-                placeholder={"id: 1\nname: Fido\nstatus: available"}
+            <>
+              <FormField
+                label="Summary"
+                value={typeof exampleObj.summary === "string" ? exampleObj.summary : ""}
+                onChange={handleSummaryChange}
+                placeholder="Short description of the example"
               />
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                Enter example payload as YAML. Saved on blur.
-              </p>
-            </div>
+
+              <FormField
+                label="Description"
+                value={
+                  typeof exampleObj.description === "string"
+                    ? exampleObj.description
+                    : ""
+                }
+                onChange={handleDescriptionChange}
+                type="textarea"
+                placeholder="Detailed description"
+              />
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Source:
+                </label>
+                <button
+                  type="button"
+                  onClick={handleToggleMode}
+                  className={`rounded-l px-2 py-0.5 text-xs font-medium ${
+                    !useExternalValue
+                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+                  }`}
+                >
+                  Inline Value
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggleMode}
+                  className={`rounded-r px-2 py-0.5 text-xs font-medium ${
+                    useExternalValue
+                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+                  }`}
+                >
+                  External URL
+                </button>
+              </div>
+
+              {useExternalValue ? (
+                <FormField
+                  label="External Value URL"
+                  value={
+                    typeof exampleObj.externalValue === "string"
+                      ? exampleObj.externalValue
+                      : ""
+                  }
+                  onChange={handleExternalValueChange}
+                  type="url"
+                  placeholder="https://example.com/example.json"
+                />
+              ) : (
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Value (YAML)
+                  </label>
+                  <textarea
+                    value={valueText}
+                    onChange={(e) => setValueText(e.target.value)}
+                    onBlur={handleValueBlur}
+                    rows={6}
+                    spellCheck={false}
+                    className="w-full resize-y rounded border border-gray-300 bg-white px-3 py-1.5 font-mono text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                    placeholder={"id: 1\nname: Fido\nstatus: available"}
+                  />
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    Enter example payload as YAML. Saved on blur.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -270,7 +344,7 @@ export default function ExamplesEditor({
 
   const handleRemove = useCallback(
     (name: string) => {
-      const updated: Record<string, ExampleObject> = {};
+      const updated: Record<string, ExampleOrRef> = {};
       for (const [key, value] of Object.entries(examples)) {
         if (key !== name) {
           updated[key] = value;
@@ -286,7 +360,7 @@ export default function ExamplesEditor({
 
   const handleRename = useCallback(
     (oldName: string, newName: string) => {
-      const updated: Record<string, ExampleObject> = {};
+      const updated: Record<string, ExampleOrRef> = {};
       for (const [key, value] of Object.entries(examples)) {
         if (key === oldName) {
           updated[newName] = value;

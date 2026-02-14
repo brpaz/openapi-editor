@@ -5,6 +5,7 @@ import FormField from "../shared/FormField";
 import ArrayEditor from "../shared/ArrayEditor";
 import MarkdownEditor from "../shared/MarkdownEditor";
 import ExamplesEditor from "../shared/ExamplesEditor";
+import CodeSamplesEditor from "../shared/CodeSamplesEditor";
 import { usePromptDialog } from "../shared/PromptDialog";
 import SchemaEditor from "../schema/SchemaEditor";
 import type { SchemaObject } from "../schema/PropertyList";
@@ -624,6 +625,17 @@ function OperationPanelInner({
               + Add response
             </button>
           </div>
+        </fieldset>
+
+        <fieldset className="rounded border border-gray-200 p-4 dark:border-gray-700">
+          <legend className="px-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+            Code Samples (x-codeSamples)
+          </legend>
+          <CodeSamplesEditor
+            codeSamples={(operation["x-codeSamples"] ?? []) as Array<{ lang: string; label?: string; source?: string | { $ref: string } }>}
+            basePath={[...basePath, "x-codeSamples"]}
+            onUpdate={handleSchemaUpdate}
+          />
         </fieldset>
       </div>
       {promptDialog}

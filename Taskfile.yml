@@ -80,20 +80,21 @@ tasks:
     preconditions:
       - sh: command -v flatpak-builder
         msg: flatpak-builder is required. Install with 'sudo apt install flatpak-builder'
+      - sh: command -v patchelf || nix-shell -p patchelf --run "which patchelf"
+        msg: patchelf is required. Install with 'sudo apt install patchelf' or use devenv shell (includes patchelf via Nix)
     generates:
       - flatpak/openapi-editor.flatpak
       - flatpak/repo
     cmds:
       - cp src-tauri/target/release/openapi-editor flatpak/openapi-editor
+      - nix-shell -p patchelf --run "patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 flatpak/openapi-editor"
       - cp src-tauri/icons/128x128.png flatpak/icon-128x128.png
       - cp src-tauri/icons/128x128@2x.png flatpak/icon-256x256.png
-      - flatpak-builder --force-clean --repo=flatpak/repo flatpak/build flatpak/dev.brunopaz.openapi-editor.yml
+      - flatpak-builder --force-clean --disable-rofiles-fuse --repo=flatpak/repo flatpak/build flatpak/dev.brunopaz.openapi-editor.yml
       - flatpak build-bundle flatpak/repo flatpak/openapi-editor.flatpak dev.brunopaz.openapi-editor
 
   flatpak:install:
-    desc: Run the Flatpak bundle
-    deps:
-      - build:flatpak
+    desc: Installs the Flatpak bundle
     cmds:
       - flatpak install flatpak/openapi-editor.flatpak
 

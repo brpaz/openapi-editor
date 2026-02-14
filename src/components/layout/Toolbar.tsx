@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "../../hooks/useTheme";
 import { useSpecStore } from "../../store/spec-store";
 import { useTemporalStore } from "../../store/spec-store";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   openFileAction,
   saveFileAction,
@@ -141,6 +142,8 @@ export default function Toolbar() {
     { separator: true },
     { label: "Copy to Clipboard", action: () => void copyToClipboardAction(), disabled: !hasSpec },
     { label: "Paste from Clipboard", action: () => void pasteFromClipboardAction() },
+    { separator: true },
+    { label: "Exit", action: () => void getCurrentWindow().close() },
   ];
 
   const editItems: MenuEntry[] = [
