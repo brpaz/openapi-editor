@@ -39,7 +39,7 @@ jobs:
         run: pnpm test
 
   build:
-    name: Build Release (${{ matrix.platform }})
+    name: Build Release (${{ matrix.name }})
     needs: [check]
     permissions:
       contents: write
@@ -47,13 +47,17 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - platform: macos-latest
+          - name: macOS (ARM64)
+            platform: macos-latest
             args: "--target aarch64-apple-darwin"
-          - platform: macos-latest
+          - name: macOS (x86_64)
+            platform: macos-latest
             args: "--target x86_64-apple-darwin"
-          - platform: ubuntu-24.04
+          - name: Linux (x86_64)
+            platform: ubuntu-24.04
             args: ""
-          - platform: windows-latest
+          - name: Windows (x86_64)
+            platform: windows-latest
             args: ""
     runs-on: ${{ matrix.platform }}
     steps:
