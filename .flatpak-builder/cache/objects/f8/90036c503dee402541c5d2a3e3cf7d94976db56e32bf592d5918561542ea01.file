@@ -1,5 +1,0 @@
-[Runtime]
-name=dev.brunopaz.openapi_editor.Debug
-
-[ExtensionOf]
-ref=app/dev.brunopaz.openapi-editor/x86_64/master
