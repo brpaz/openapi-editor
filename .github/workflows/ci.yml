@@ -51,7 +51,7 @@ jobs:
             platform: macos-latest
             args: ""
           - name: macOS (x86_64)
-            platform: macos-13
+            platform: macos-15-intel
             args: ""
           - name: Linux (x86_64)
             platform: ubuntu-24.04
@@ -76,7 +76,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workdir: src-tauri
+          workspaces: src-tauri
           shared-key: ${{ matrix.platform }}
 
       - name: Install Linux dependencies
@@ -87,64 +87,117 @@ jobs:
 
       - run: pnpm run tauri build -- ${{ matrix.args }}
 
-      - name: Upload Linux artifacts to release
+      - name: Upload Linux .deb to release
         if: matrix.platform == 'ubuntu-24.04' && github.event_name == 'release'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$GITHUB_REF_NAME" \
             src-tauri/target/release/bundle/deb/*.deb \
+            --clobber
+
+      - name: Upload Linux .rpm to release
+        if: matrix.platform == 'ubuntu-24.04' && github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
             src-tauri/target/release/bundle/rpm/*.rpm \
+            --clobber
+
+      - name: Upload Linux AppImage to release
+        if: matrix.platform == 'ubuntu-24.04' && github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
             src-tauri/target/release/bundle/appimage/*.AppImage \
             --clobber
 
-      - name: Upload Linux artifacts
+      - name: Upload Linux .deb artifact
         if: matrix.platform == 'ubuntu-24.04' && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: linux-bundles
-          path: |
-            src-tauri/target/release/bundle/deb/*.deb
-            src-tauri/target/release/bundle/rpm/*.rpm
-            src-tauri/target/release/bundle/appimage/*.AppImage
+          name: linux-deb
+          path: src-tauri/target/release/bundle/deb/*.deb
 
-      - name: Upload macOS artifacts to release
-        if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-13') && github.event_name == 'release'
+      - name: Upload Linux .rpm artifact
+        if: matrix.platform == 'ubuntu-24.04' && github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-rpm
+          path: src-tauri/target/release/bundle/rpm/*.rpm
+
+      - name: Upload Linux AppImage artifact
+        if: matrix.platform == 'ubuntu-24.04' && github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: src-tauri/target/release/bundle/appimage/*.AppImage
+
+      - name: Upload macOS .dmg to release
+        if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-15-intel') && github.event_name == 'release'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$GITHUB_REF_NAME" \
             src-tauri/target/release/bundle/dmg/*.dmg \
+            --clobber
+
+      - name: Upload macOS .app.tar.gz to release
+        if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-15-intel') && github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
             src-tauri/target/release/bundle/macos/*.app.tar.gz \
             --clobber
 
-      - name: Upload macOS artifacts
-        if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-13') && github.event_name != 'release'
+      - name: Upload macOS .dmg artifact
+        if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-15-intel') && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: macos-${{ matrix.platform }}-bundles
-          path: |
-            src-tauri/target/release/bundle/dmg/*.dmg
-            src-tauri/target/release/bundle/macos/*.app.tar.gz
+          name: macos-dmg-${{ matrix.platform == 'macos-latest' && 'arm64' || 'x86_64' }}
+          path: src-tauri/target/release/bundle/dmg/*.dmg
 
-      - name: Upload Windows artifacts to release
+      - name: Upload macOS .app.tar.gz artifact
+        if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-15-intel') && github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app-${{ matrix.platform == 'macos-latest' && 'arm64' || 'x86_64' }}
+          path: src-tauri/target/release/bundle/macos/*.app.tar.gz
+
+      - name: Upload Windows .msi to release
         if: matrix.platform == 'windows-latest' && github.event_name == 'release'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$GITHUB_REF_NAME" `
             src-tauri/target/release/bundle/msi/*.msi `
+            --clobber
+
+      - name: Upload Windows .exe to release
+        if: matrix.platform == 'windows-latest' && github.event_name == 'release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" `
             src-tauri/target/release/bundle/nsis/*.exe `
             --clobber
 
-      - name: Upload Windows artifacts
+      - name: Upload Windows .msi artifact
         if: matrix.platform == 'windows-latest' && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: windows-bundles
-          path: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/nsis/*.exe
+          name: windows-msi
+          path: src-tauri/target/release/bundle/msi/*.msi
+
+      - name: Upload Windows .exe artifact
+        if: matrix.platform == 'windows-latest' && github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: src-tauri/target/release/bundle/nsis/*.exe
 
   flatpak:
     name: Build Flatpak Bundle
@@ -177,7 +230,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workdir: src-tauri
+          workspaces: src-tauri
           shared-key: flatpak
 
       - run: pnpm install --frozen-lockfile

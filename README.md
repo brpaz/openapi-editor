@@ -11,6 +11,12 @@
 > [!WARNING]
 > This software was vibe coded in a weekend with Opus 4.6 to solve a personal itch. Use at your own risk.
 
+## Screenshot
+
+<div align="center">
+  <img src="docs/assets/screenshot.png" alt="OpenAPI Editor Screenshot" width="100%">
+</div>
+
 ## Features
 
 - Form-based editing for all OpenAPI 3.1 elements (paths, operations, schemas, responses, parameters, request bodies)
