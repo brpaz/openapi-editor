@@ -3,6 +3,7 @@ import { useSpecStore } from "../../store/spec-store";
 import { useFieldErrors } from "../../hooks/useValidation";
 import FormField from "../shared/FormField";
 import ArrayEditor from "../shared/ArrayEditor";
+import { usePromptDialog } from "../shared/PromptDialog";
 import type { oas31 } from "openapi3-ts";
 
 function getTags(spec: oas31.OpenAPIObject): oas31.TagObject[] {
@@ -102,16 +103,17 @@ export function TagsListPanel() {
   const updateField = useSpecStore((s) => s.updateField);
   const removeElement = useSpecStore((s) => s.removeElement);
   const setSelectedPath = useSpecStore((s) => s.setSelectedPath);
+  const [prompt, promptDialog] = usePromptDialog();
 
-  const handleAdd = useCallback(() => {
+  const handleAdd = useCallback(async () => {
     if (!spec) return;
-    const name = window.prompt("Tag name:");
+    const name = await prompt("Tag name:");
     if (!name) return;
     const tags = getTags(spec);
     const index = tags.length;
     updateField(["tags"], [...tags, { name }]);
     setSelectedPath(["tags", index.toString()]);
-  }, [spec, updateField, setSelectedPath]);
+  }, [spec, updateField, setSelectedPath, prompt]);
 
   const handleRemove = useCallback(
     (index: number) => {
@@ -146,6 +148,7 @@ export function TagsListPanel() {
           </button>
         )}
       />
+      {promptDialog}
     </div>
   );
 }

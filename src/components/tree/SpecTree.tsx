@@ -6,6 +6,7 @@ import { HTTP_METHODS } from "../../types/tree";
 import type { HttpMethod } from "../../types/tree";
 import TreeNodeComponent from "./TreeNode";
 import TreeSearch from "./TreeSearch";
+import { usePromptDialog } from "../shared/PromptDialog";
 import {
   addPathAction,
   addOperationAction,
@@ -42,6 +43,7 @@ export default function SpecTree() {
   const selectedPath = useSpecStore((s) => s.selectedPath);
   const setSelectedPath = useSpecStore((s) => s.setSelectedPath);
   const [searchQuery, setSearchQuery] = useState("");
+  const [prompt, promptDialog] = usePromptDialog();
 
   const tree = useMemo(() => {
     if (!spec) return [];
@@ -60,13 +62,13 @@ export default function SpecTree() {
     [setSelectedPath],
   );
 
-  const handleAdd = useCallback((node: TreeNode) => {
+  const handleAdd = useCallback(async (node: TreeNode) => {
     const spec = useSpecStore.getState().spec;
     if (!spec) return;
 
     switch (node.type) {
       case "paths": {
-        const name = window.prompt("Path (e.g. /users/{id}):");
+        const name = await prompt("Path (e.g. /users/{id}):");
         if (name) addPathAction(name);
         break;
       }
@@ -79,11 +81,10 @@ export default function SpecTree() {
         );
         const available = HTTP_METHODS.filter((m) => !existingMethods.has(m));
         if (available.length === 0) {
-          window.alert("All HTTP methods already exist on this path.");
           return;
         }
-        const method = window.prompt(
-          `HTTP method for ${pathKey}:\nAvailable: ${available.join(", ")}`,
+        const method = await prompt(
+          `HTTP method for ${pathKey} (${available.join(", ")}):`,
         );
         if (method && available.includes(method.toLowerCase() as HttpMethod)) {
           addOperationAction(pathKey, method.toLowerCase() as HttpMethod);
@@ -91,22 +92,22 @@ export default function SpecTree() {
         break;
       }
       case "schemas": {
-        const name = window.prompt("Schema name:");
+        const name = await prompt("Schema name:");
         if (name) addSchemaAction(name);
         break;
       }
       case "responses": {
-        const name = window.prompt("Response name:");
+        const name = await prompt("Response name:");
         if (name) addResponseAction(name);
         break;
       }
       case "parameters": {
-        const name = window.prompt("Parameter name:");
+        const name = await prompt("Parameter name:");
         if (name) addParameterAction(name);
         break;
       }
       case "requestBodies": {
-        const name = window.prompt("Request body name:");
+        const name = await prompt("Request body name:");
         if (name) addRequestBodyAction(name);
         break;
       }
@@ -115,12 +116,12 @@ export default function SpecTree() {
         break;
       }
       case "tags": {
-        const name = window.prompt("Tag name:");
+        const name = await prompt("Tag name:");
         if (name) addTagAction(name);
         break;
       }
     }
-  }, []);
+  }, [prompt]);
 
   const handleDelete = useCallback((node: TreeNode) => {
     const confirmed = window.confirm(
@@ -163,6 +164,7 @@ export default function SpecTree() {
           ))
         )}
       </div>
+      {promptDialog}
     </div>
   );
 }

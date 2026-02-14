@@ -1,9 +1,6 @@
-import {
-  createConfig,
-  lintFromString,
-  type NormalizedProblem,
-  type Config,
-} from "@redocly/openapi-core";
+import SwaggerParser from "@apidevtools/swagger-parser";
+import type { OpenAPI } from "openapi-types";
+import { parseDocument } from "yaml";
 import type {
   ValidationError,
   ValidationResult,
@@ -11,47 +8,9 @@ import type {
 } from "../types/validation";
 import { pointerToPath } from "../types/editor";
 
-let cachedConfig: Config | null = null;
-
-async function getConfig(): Promise<Config> {
-  if (!cachedConfig) {
-    cachedConfig = await createConfig({
-      extends: ["minimal"],
-    });
-  }
-  return cachedConfig;
-}
-
-function severityFromRedocly(severity: "error" | "warn"): ValidationSeverity {
-  return severity === "warn" ? "warning" : "error";
-}
-
-function extractPath(problem: NormalizedProblem): string[] {
-  const loc = problem.location[0];
-  if (!loc) return [];
-  if ("pointer" in loc && loc.pointer) {
-    return pointerToPath(loc.pointer);
-  }
-  return [];
-}
-
-function toValidationError(problem: NormalizedProblem): ValidationError {
-  const loc = problem.location[0];
-  const result: ValidationError = {
-    message: problem.message,
-    path: extractPath(problem),
-    severity: severityFromRedocly(problem.severity),
-    ruleId: problem.ruleId,
-  };
-
-  if (loc && "start" in loc && loc.start) {
-    result.start = { line: loc.start.line, col: loc.start.col };
-  }
-  if (loc && "end" in loc && loc.end) {
-    result.end = { line: loc.end.line, col: loc.end.col };
-  }
-
-  return result;
+interface AjvDetail {
+  instancePath?: string;
+  message?: string;
 }
 
 function emptyCounts(): Record<ValidationSeverity, number> {
@@ -61,34 +20,65 @@ function emptyCounts(): Record<ValidationSeverity, number> {
 export async function validateSpec(
   yamlString: string,
 ): Promise<ValidationResult> {
-  const config = await getConfig();
-  let problems: NormalizedProblem[];
+  let spec: Record<string, unknown>;
 
   try {
-    problems = await lintFromString({
-      source: yamlString,
-      config,
-    });
+    const doc = parseDocument(yamlString);
+    if (doc.errors.length > 0) {
+      return {
+        errors: doc.errors.map((e) => ({
+          message: e.message,
+          path: [],
+          severity: "error" as const,
+        })),
+        counts: { error: doc.errors.length, warning: 0, info: 0 },
+      };
+    }
+    spec = doc.toJSON() as Record<string, unknown>;
+    if (!spec || typeof spec !== "object") {
+      return {
+        errors: [{ message: "YAML did not parse to an object", path: [], severity: "error" }],
+        counts: { error: 1, warning: 0, info: 0 },
+      };
+    }
   } catch {
     return {
-      errors: [
-        {
-          message: "Validation failed unexpectedly",
-          path: [],
-          severity: "error",
-        },
-      ],
+      errors: [{ message: "Failed to parse YAML", path: [], severity: "error" }],
       counts: { error: 1, warning: 0, info: 0 },
     };
   }
 
-  const errors = problems.map(toValidationError);
-  const counts = emptyCounts();
-  for (const err of errors) {
-    counts[err.severity]++;
-  }
+  try {
+    await SwaggerParser.validate(structuredClone(spec) as OpenAPI.Document);
+    return { errors: [], counts: emptyCounts() };
+  } catch (err: unknown) {
+    const errors: ValidationError[] = [];
 
-  return { errors, counts };
+    if (err && typeof err === "object" && "details" in err) {
+      const details = (err as { details: AjvDetail[] }).details;
+      if (Array.isArray(details)) {
+        for (const detail of details) {
+          errors.push({
+            message: detail.message ?? "Validation error",
+            path: pointerToPath(detail.instancePath ?? ""),
+            severity: "error",
+          });
+        }
+      }
+    }
+
+    if (errors.length === 0) {
+      const message = err instanceof Error ? err.message : "Validation failed";
+      errors.push({ message, path: [], severity: "error" });
+    }
+
+    const counts = emptyCounts();
+    for (const e of errors) {
+      counts[e.severity]++;
+    }
+
+    return { errors, counts };
+  }
 }
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;

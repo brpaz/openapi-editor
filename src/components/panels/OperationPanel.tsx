@@ -4,6 +4,8 @@ import { useFieldErrors } from "../../hooks/useValidation";
 import FormField from "../shared/FormField";
 import ArrayEditor from "../shared/ArrayEditor";
 import MarkdownEditor from "../shared/MarkdownEditor";
+import ExamplesEditor from "../shared/ExamplesEditor";
+import { usePromptDialog } from "../shared/PromptDialog";
 import SchemaEditor from "../schema/SchemaEditor";
 import type { SchemaObject } from "../schema/PropertyList";
 import type { oas31 } from "openapi3-ts";
@@ -34,11 +36,14 @@ type ParameterObject = {
   schema?: SchemaObject;
 };
 
+type ExampleRecord = Record<string, { summary?: string; description?: string; value?: unknown; externalValue?: string }>;
+
 type ResponseEntry = {
   statusCode: string;
   description?: string;
   contentType?: string;
   schema?: SchemaObject;
+  examples?: ExampleRecord;
 };
 
 function getOperation(
@@ -82,11 +87,15 @@ function getResponses(op: oas31.OperationObject): ResponseEntry[] {
     const schema = contentType
       ? (responseObj.content?.[contentType]?.schema as SchemaObject | undefined)
       : undefined;
+    const examples = contentType
+      ? (responseObj.content?.[contentType]?.examples as ExampleRecord | undefined)
+      : undefined;
     entries.push({
       statusCode,
       description: responseObj.description,
       contentType,
       schema,
+      examples,
     });
   }
   return entries;
@@ -103,6 +112,7 @@ function OperationPanelInner({
 }: OperationPanelProps) {
   const spec = useSpecStore((s) => s.spec);
   const updateField = useSpecStore((s) => s.updateField);
+  const [prompt, promptDialog] = usePromptDialog();
 
   const basePath = useMemo(() => ["paths", pathKey, method], [pathKey, method]);
   const getFieldError = useFieldErrors(basePath);
@@ -204,8 +214,8 @@ function OperationPanelInner({
     });
   }, [updateField, basePath]);
 
-  const handleAddResponse = useCallback(() => {
-    const code = window.prompt("Status code:", "200");
+  const handleAddResponse = useCallback(async () => {
+    const code = await prompt("Status code:", "200");
     if (!code) return;
     updateField([...basePath, "responses", code], {
       description: "",
@@ -213,7 +223,7 @@ function OperationPanelInner({
         "application/json": { schema: { type: "object" } },
       },
     });
-  }, [updateField, basePath]);
+  }, [updateField, basePath, prompt]);
 
   const handleRemoveResponse = useCallback(
     (statusCode: string) => {
@@ -500,6 +510,19 @@ function OperationPanelInner({
                   </p>
                 )}
               </div>
+              <ExamplesEditor
+                examples={
+                  (requestBody.content?.[rbContentType]?.examples ?? {}) as ExampleRecord
+                }
+                basePath={[
+                  ...basePath,
+                  "requestBody",
+                  "content",
+                  rbContentType,
+                  "examples",
+                ]}
+                onUpdate={handleSchemaUpdate}
+              />
             </div>
           ) : (
             <div className="py-2">
@@ -575,6 +598,20 @@ function OperationPanelInner({
                         />
                       </div>
                     )}
+                    {resp.contentType && (
+                      <ExamplesEditor
+                        examples={resp.examples ?? {}}
+                        basePath={[
+                          ...basePath,
+                          "responses",
+                          resp.statusCode,
+                          "content",
+                          resp.contentType,
+                          "examples",
+                        ]}
+                        onUpdate={handleSchemaUpdate}
+                      />
+                    )}
                   </div>
                 </div>
               ))
@@ -589,6 +626,7 @@ function OperationPanelInner({
           </div>
         </fieldset>
       </div>
+      {promptDialog}
     </div>
   );
 }
