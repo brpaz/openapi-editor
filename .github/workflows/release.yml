@@ -1,28 +1,260 @@
-name: "Release"
+name: Release
+
 on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build (e.g., v1.0.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  update-changelog:
+  prepare:
+    name: Prepare release
     runs-on: ubuntu-latest
+    outputs:
+      commit_sha: ${{ steps.get-sha.outputs.sha }}
+      tag: ${{ steps.resolve-tag.outputs.tag }}
+      release_notes: ${{ steps.resolve-tag.outputs.release_notes }}
+    steps:
+      - name: Resolve tag and release notes
+        id: resolve-tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+            RELEASE_NOTES="${{ github.event.release.body }}"
+          else
+            TAG="${{ inputs.tag }}"
+            RELEASE_NOTES=""
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "Resolved tag: $TAG"
+
+      - name: Get commit SHA
+        id: get-sha
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            SHA="${{ github.event.release.target_commitish }}"
+          else
+            SHA=$(git ls-remote https://github.com/${{ github.repository }} refs/tags/${{ steps.resolve-tag.outputs.tag }} | cut -f1)
+          fi
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "Verifying commit: $SHA"
+
+      - name: Check CI status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ steps.get-sha.outputs.sha }}"
+          echo "Checking CI workflow status for commit $SHA..."
+
+          # Get the workflow run for the CI workflow on this commit
+          WORKFLOW_RUNS=$(gh api repos/${{ github.repository }}/actions/runs \
+            --jq ".workflow_runs[] | select(.head_sha == \"$SHA\" and .name == \"CI\")")
+
+          if [ -z "$WORKFLOW_RUNS" ]; then
+            echo "❌ No CI workflow runs found for this commit"
+            echo "Make sure the commit has been pushed to main and CI has run"
+            exit 1
+          fi
+
+          # Get the conclusion of the latest CI workflow run
+          CONCLUSION=$(echo "$WORKFLOW_RUNS" | jq -r '.conclusion' | head -n 1)
+          STATUS=$(echo "$WORKFLOW_RUNS" | jq -r '.status' | head -n 1)
+
+          echo "CI workflow status: $STATUS"
+          echo "CI workflow conclusion: $CONCLUSION"
+
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "❌ CI workflow did not pass (conclusion: $CONCLUSION)"
+            exit 1
+          fi
+
+          echo "✓ CI workflow passed for commit $SHA"
+
+  version:
+    name: Set release versions
+    needs: [prepare]
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.commit_sha }}
+
+      - name: Set release version
+        env:
+          GITHUB_REF_NAME: ${{ needs.prepare.outputs.tag }}
+          RELEASE_NOTES: ${{ needs.prepare.outputs.release_notes }}
+        run: |
+          node scripts/set-release-version-tauri.mjs
+          node scripts/set-release-version-flatpak.mjs
+
+      - name: Upload modified version files as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-version-files
+          path: |
+            src-tauri/Cargo.toml
+            src-tauri/tauri.conf.json
+            flatpak/dev.brunopaz.openapi-editor.metainfo.xml
+          retention-days: 1
+
+  build:
+    name: Build - ${{ matrix.settings.name }}
+    needs: [prepare, version]
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - name: macOS (ARM64)
+            platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+          - name: macOS (x86_64)
+            platform: macos-latest-intel
+            args: "--target x86_64-apple-darwin"
+          - name: Linux (x86_64)
+            platform: ubuntu-24.04
+            args: ""
+          - name: Windows (x86_64)
+            platform: windows-latest
+            args: ""
+    runs-on: ${{ matrix.settings.platform }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.commit_sha }}
+
+      - name: Download modified files artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-version-files
+          path: .
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux dependencies
+        if: matrix.settings.platform == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ needs.prepare.outputs.tag }}
+          releaseName: ${{ needs.prepare.outputs.tag }}
+          releaseBody: ${{ needs.prepare.outputs.release_notes }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.settings.args }}
+
+  flatpak:
+    name: Build Flatpak Bundle
+    needs: [prepare, version]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.commit_sha }}
+
+      - name: Download modified files artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-version-files
+          path: .
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install Flatpak and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            flatpak flatpak-builder \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub org.gnome.Platform//49 org.gnome.Sdk//49
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run tauri build --no-bundle
+
+      - name: Build Flatpak from source
+        run: |
+          cp src-tauri/target/release/openapi-editor flatpak/openapi-editor
+          cp src-tauri/icons/128x128.png flatpak/icon-128x128.png
+          cp src-tauri/icons/128x128@2x.png flatpak/icon-256x256.png
+          flatpak-builder --force-clean --disable-rofiles-fuse --repo=flatpak/repo flatpak/build flatpak/dev.brunopaz.openapi-editor.yml
+          flatpak build-bundle flatpak/repo flatpak/openapi-editor.flatpak dev.brunopaz.openapi-editor
+
+      - name: Upload Flatpak to release
+        run: gh release upload "$TAG" flatpak/openapi-editor.flatpak --clobber
+
+  commit-release-files:
+    name: Commit release files
+    needs: [build, flatpak]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
 
       - name: Update Changelog
         uses: stefanzweifel/changelog-updater-action@v1
         with:
-          latest-version: ${{ github.event.release.tag_name }}
-          release-notes: ${{ github.event.release.body }}
+          latest-version: ${{ needs.prepare.outputs.tag }}
+          release-notes: ${{ needs.prepare.outputs.release_notes }}
 
-      - name: Commit updated CHANGELOG file
+      - name: Download modified files artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-version-files
+          path: .
+
+      - name: Commit modified files
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           branch: main
-          commit_message: "chore(release): [skip ci] ${{ github.event.release.tag_name }}"
-          file_pattern: CHANGELOG.md
+          commit_message: "chore(release): ${{ needs.prepare.outputs.tag }} [skip ci]"
+          file_pattern: CHANGELOG.md src-tauri/Cargo.toml src-tauri/tauri.conf.json flatpak/dev.brunopaz.openapi-editor.metainfo.xml
