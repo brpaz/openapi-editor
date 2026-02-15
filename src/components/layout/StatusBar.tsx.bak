@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSpecStore } from "../../store/spec-store";
 import type { ValidationError } from "../../types/validation";
 
@@ -119,7 +119,7 @@ export default function StatusBar() {
         )}
       </div>
 
-      {isDropdownVisible && (
+      {showErrors && (
         <>
           <div
             className="fixed inset-0 z-40"

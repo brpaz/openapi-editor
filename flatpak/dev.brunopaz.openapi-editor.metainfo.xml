@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <component type="desktop-application">
   <id>dev.brunopaz.openapi-editor</id>
   <name>OpenAPI Editor</name>
@@ -27,8 +27,8 @@
       <li>Recent files list</li>
     </ul>
   </description>
-  <url type="homepage">https://github.com/bruno/openapi-editor</url>
-  <url type="bugtracker">https://github.com/bruno/openapi-editor/issues</url>
+  <url type="homepage">https://github.com/brpaz/openapi-editor</url>
+  <url type="bugtracker">https://github.com/brpaz/openapi-editor/issues</url>
   <launchable type="desktop-id">dev.brunopaz.openapi-editor.desktop</launchable>
   <content_rating type="oars-1.1" />
   <categories>

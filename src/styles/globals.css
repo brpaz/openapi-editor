@@ -1,3 +1,13 @@
-@import "tailwindcss" source("../../src");
+@import "tailwindcss" source("../../src/");
 
-@custom-variant dark (&:where(.dark, .dark *));
+@variant dark (.dark &);
+
+/* Hint to browsers to use dark mode for native form controls (select, date picker, etc.) */
+.dark {
+  color-scheme: dark;
+}
+
+/* Explicitly set color-scheme on option elements for better browser compatibility */
+.dark option {
+  color-scheme: dark;
+}

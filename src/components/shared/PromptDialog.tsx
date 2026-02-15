@@ -7,9 +7,7 @@ interface PromptState {
   resolve: (value: string | null) => void;
 }
 
-const INPUT_CLASSES =
-  "w-full rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400";
-
+// eslint-disable-next-line react-refresh/only-export-components
 function PromptDialog({ state, onClose }: { state: PromptState; onClose: () => void }) {
   const [value, setValue] = useState(state.defaultValue);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,7 +58,7 @@ function PromptDialog({ state, onClose }: { state: PromptState; onClose: () => v
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          className={INPUT_CLASSES}
+          className="w-full rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
         />
         <div className="mt-4 flex justify-end gap-2">
           <button

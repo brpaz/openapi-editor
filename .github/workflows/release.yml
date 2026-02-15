@@ -230,10 +230,10 @@ jobs:
           cp src-tauri/icons/128x128.png flatpak/icon-128x128.png
           cp src-tauri/icons/128x128@2x.png flatpak/icon-256x256.png
           flatpak-builder --force-clean --disable-rofiles-fuse --repo=flatpak/repo flatpak/build flatpak/dev.brunopaz.openapi-editor.yml
-          flatpak build-bundle flatpak/repo flatpak/OpenAPI.Editor-${TAG}.flatpak  dev.brunopaz.openapi-editor
+          flatpak build-bundle flatpak/repo flatpak/OpenAPI.Editor-${TAG}.flatpakref  dev.brunopaz.openapi-editor
 
       - name: Upload Flatpak to release
-        run: gh release upload "$TAG" flatpak/OpenAPI.Editor-${TAG}.flatpak --clobber
+        run: gh release upload "$TAG" flatpak/OpenAPI.Editor-${TAG}.flatpakref --clobber
 
   commit-release-files:
     name: Commit release files

@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { dirname, resolve } from "@tauri-apps/api/path";
 import FormField from "./FormField";
@@ -287,7 +287,10 @@ export default function CodeSamplesEditor({
   onUpdate,
 }: CodeSamplesEditorProps) {
   const [prompt, promptDialog] = usePromptDialog();
-  const samplesArray = Array.isArray(codeSamples) ? codeSamples : [];
+  const samplesArray = useMemo(
+    () => (Array.isArray(codeSamples) ? codeSamples : []),
+    [codeSamples],
+  );
 
   const handleAdd = useCallback(async () => {
     const lang = await prompt("Enter language (e.g., javascript, python, curl):");

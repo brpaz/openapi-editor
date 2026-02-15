@@ -117,11 +117,7 @@ export default function FormField({
           className={inputClasses}
         >
           {options?.map((opt) => (
-            <option 
-              key={opt.value} 
-              value={opt.value}
-              className="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-            >
+            <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
