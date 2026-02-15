@@ -1,0 +1,1041 @@
+openapi: 3.1.0
+info:
+  title: Pet Store API
+  version: 1.0.0
+  description: |
+    A complete example API for managing a pet store with various animals, 
+    customer orders, and user authentication. This spec demonstrates all 
+    major OpenAPI 3.1 features.
+  contact:
+    name: API Support
+    email: support@petstore.example
+    url: https://petstore.example/support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://petstore.example/terms
+
+servers:
+  - url: https://api.petstore.example/v1
+    description: Production server
+  - url: https://staging-api.petstore.example/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Local development
+
+tags:
+  - name: pets
+    description: Pet inventory operations
+  - name: store
+    description: Store order management
+  - name: users
+    description: User account operations
+
+paths:
+  /pets:
+    get:
+      summary: List all pets
+      description: Returns a paginated list of pets in the store inventory
+      operationId: listPets
+      tags:
+        - pets
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of results to return
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of results to skip
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+        - name: status
+          in: query
+          description: Filter by pet status
+          required: false
+          schema:
+            type: string
+            enum:
+              - available
+              - pending
+              - sold
+        - name: species
+          in: query
+          description: Filter by species
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - dog
+                - cat
+                - bird
+                - fish
+                - reptile
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: Successful response with list of pets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pet'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+              examples:
+                with-pets:
+                  summary: List with multiple pets
+                  value:
+                    data:
+                      - id: 1
+                        name: Buddy
+                        species: dog
+                        breed: Golden Retriever
+                        age: 3
+                        status: available
+                        price: 599.99
+                      - id: 2
+                        name: Whiskers
+                        species: cat
+                        breed: Siamese
+                        age: 2
+                        status: available
+                        price: 399.99
+                    pagination:
+                      total: 42
+                      limit: 20
+                      offset: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - apiKey: []
+
+    post:
+      summary: Add a new pet
+      description: Add a new pet to the store inventory
+      operationId: createPet
+      tags:
+        - pets
+      requestBody:
+        description: Pet object to be added
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetInput'
+            examples:
+              dog:
+                summary: Example dog
+                value:
+                  name: Max
+                  species: dog
+                  breed: Labrador
+                  age: 1
+                  status: available
+                  price: 499.99
+              cat:
+                summary: Example cat
+                value:
+                  name: Luna
+                  species: cat
+                  breed: Persian
+                  age: 2
+                  status: available
+                  price: 799.99
+      responses:
+        '201':
+          description: Pet created successfully
+          headers:
+            Location:
+              description: URL of the created pet
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+  /pets/{petId}:
+    parameters:
+      - name: petId
+        in: path
+        description: ID of the pet
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    get:
+      summary: Get pet by ID
+      description: Returns detailed information about a specific pet
+      operationId: getPetById
+      tags:
+        - pets
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - apiKey: []
+
+    put:
+      summary: Update pet
+      description: Update an existing pet's information
+      operationId: updatePet
+      tags:
+        - pets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetInput'
+      responses:
+        '200':
+          description: Pet updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+    delete:
+      summary: Delete pet
+      description: Remove a pet from the inventory
+      operationId: deletePet
+      tags:
+        - pets
+      responses:
+        '204':
+          description: Pet deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+  /pets/{petId}/photo:
+    parameters:
+      - name: petId
+        in: path
+        description: ID of the pet
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    post:
+      summary: Upload pet photo
+      description: Upload a photo for the specified pet
+      operationId: uploadPetPhoto
+      tags:
+        - pets
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: The photo file
+                caption:
+                  type: string
+                  description: Optional caption for the photo
+              required:
+                - photo
+      responses:
+        '200':
+          description: Photo uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photoUrl:
+                    type: string
+                    format: uri
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: Photo file too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+  /store/orders:
+    post:
+      summary: Place an order
+      description: Create a new order for purchasing pets
+      operationId: placeOrder
+      tags:
+        - store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderInput'
+            examples:
+              single-pet:
+                summary: Order for single pet
+                value:
+                  petIds:
+                    - 1
+                  customerId: 123
+                  shipDate: '2024-03-15T10:00:00Z'
+      responses:
+        '201':
+          description: Order placed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+  /store/orders/{orderId}:
+    parameters:
+      - name: orderId
+        in: path
+        description: ID of the order
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    get:
+      summary: Get order by ID
+      description: Retrieve details of a specific order
+      operationId: getOrderById
+      tags:
+        - store
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+    delete:
+      summary: Cancel order
+      description: Cancel an existing order
+      operationId: cancelOrder
+      tags:
+        - store
+      responses:
+        '204':
+          description: Order cancelled successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Order cannot be cancelled (already shipped)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+  /users:
+    post:
+      summary: Create user
+      description: Register a new user account
+      operationId: createUser
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInput'
+            examples:
+              new-user:
+                summary: New user registration
+                value:
+                  username: johndoe
+                  email: john@example.com
+                  password: SecurePass123!
+                  firstName: John
+                  lastName: Doe
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/login:
+    post:
+      summary: User login
+      description: Authenticate user and receive access token
+      operationId: loginUser
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT access token
+                  expiresIn:
+                    type: integer
+                    description: Token expiration time in seconds
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /users/{username}:
+    parameters:
+      - name: username
+        in: path
+        description: Username of the user
+        required: true
+        schema:
+          type: string
+
+    get:
+      summary: Get user by username
+      description: Retrieve user information
+      operationId: getUserByUsername
+      tags:
+        - users
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+    put:
+      summary: Update user
+      description: Update user information
+      operationId: updateUser
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInput'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not authorized to update this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+    delete:
+      summary: Delete user
+      description: Delete user account
+      operationId: deleteUser
+      tags:
+        - users
+      responses:
+        '204':
+          description: User deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Not authorized to delete this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+        - species
+        - status
+        - price
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier for the pet
+          example: 123
+        name:
+          type: string
+          description: Name of the pet
+          minLength: 1
+          maxLength: 100
+          example: Buddy
+        species:
+          type: string
+          description: Species of the pet
+          enum:
+            - dog
+            - cat
+            - bird
+            - fish
+            - reptile
+          example: dog
+        breed:
+          type: string
+          description: Breed of the pet
+          maxLength: 100
+          example: Golden Retriever
+        age:
+          type: integer
+          description: Age of the pet in years
+          minimum: 0
+          maximum: 50
+          example: 3
+        status:
+          type: string
+          description: Availability status
+          enum:
+            - available
+            - pending
+            - sold
+          example: available
+        price:
+          type: number
+          format: float
+          description: Price in USD
+          minimum: 0
+          example: 599.99
+        tags:
+          type: array
+          description: Tags associated with the pet
+          items:
+            type: string
+          example:
+            - friendly
+            - trained
+        photoUrls:
+          type: array
+          description: URLs of pet photos
+          items:
+            type: string
+            format: uri
+        createdAt:
+          type: string
+          format: date-time
+          description: When the pet was added to inventory
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the pet information was last updated
+
+    PetInput:
+      type: object
+      required:
+        - name
+        - species
+        - status
+        - price
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        species:
+          type: string
+          enum:
+            - dog
+            - cat
+            - bird
+            - fish
+            - reptile
+        breed:
+          type: string
+          maxLength: 100
+        age:
+          type: integer
+          minimum: 0
+          maximum: 50
+        status:
+          type: string
+          enum:
+            - available
+            - pending
+            - sold
+        price:
+          type: number
+          format: float
+          minimum: 0
+        tags:
+          type: array
+          items:
+            type: string
+
+    Order:
+      type: object
+      required:
+        - id
+        - petIds
+        - customerId
+        - status
+        - total
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 456
+        petIds:
+          type: array
+          description: IDs of pets in the order
+          items:
+            type: integer
+            format: int64
+          minItems: 1
+          example:
+            - 123
+            - 124
+        customerId:
+          type: integer
+          format: int64
+          description: ID of the customer placing the order
+          example: 789
+        status:
+          type: string
+          description: Order status
+          enum:
+            - placed
+            - approved
+            - shipped
+            - delivered
+            - cancelled
+          example: placed
+        total:
+          type: number
+          format: float
+          description: Total order amount in USD
+          minimum: 0
+          example: 1199.98
+        shipDate:
+          type: string
+          format: date-time
+          description: Expected shipping date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    OrderInput:
+      type: object
+      required:
+        - petIds
+        - customerId
+      properties:
+        petIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          minItems: 1
+        customerId:
+          type: integer
+          format: int64
+        shipDate:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - email
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 789
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        firstName:
+          type: string
+          maxLength: 50
+          example: John
+        lastName:
+          type: string
+          maxLength: 50
+          example: Doe
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          example: '+12025551234'
+        role:
+          type: string
+          enum:
+            - customer
+            - staff
+            - admin
+          default: customer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserInput:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 100
+        firstName:
+          type: string
+          maxLength: 50
+        lastName:
+          type: string
+          maxLength: 50
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+
+    Pagination:
+      type: object
+      required:
+        - total
+        - limit
+        - offset
+      properties:
+        total:
+          type: integer
+          description: Total number of items
+          minimum: 0
+          example: 42
+        limit:
+          type: integer
+          description: Maximum items per page
+          minimum: 1
+          example: 20
+        offset:
+          type: integer
+          description: Number of items skipped
+          minimum: 0
+          example: 0
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: INVALID_REQUEST
+        message:
+          type: string
+          description: Human-readable error message
+          example: Invalid input data
+        details:
+          type: array
+          description: Additional error details
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: BAD_REQUEST
+            message: Invalid request parameters
+            details:
+              - field: price
+                message: Must be a positive number
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: UNAUTHORIZED
+            message: Authentication token is missing or invalid
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: NOT_FOUND
+            message: The requested resource was not found
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: INTERNAL_ERROR
+            message: An unexpected error occurred
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication for protected endpoints
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for public read access
+
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      description: Maximum number of results
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    OffsetParam:
+      name: offset
+      in: query
+      description: Number of results to skip
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 0
+
+  headers:
+    RateLimit:
+      description: Number of requests allowed per hour
+      schema:
+        type: integer
+        example: 1000
+
+    RateLimitRemaining:
+      description: Remaining requests in current window
+      schema:
+        type: integer
+        example: 999
+
+  examples:
+    DogExample:
+      summary: Golden Retriever
+      value:
+        id: 1
+        name: Buddy
+        species: dog
+        breed: Golden Retriever
+        age: 3
+        status: available
+        price: 599.99
+        tags:
+          - friendly
+          - trained
+        photoUrls:
+          - https://example.com/photos/buddy1.jpg
+
+    CatExample:
+      summary: Siamese Cat
+      value:
+        id: 2
+        name: Whiskers
+        species: cat
+        breed: Siamese
+        age: 2
+        status: available
+        price: 399.99
+        tags:
+          - calm
+          - indoor
+        photoUrls:
+          - https://example.com/photos/whiskers1.jpg

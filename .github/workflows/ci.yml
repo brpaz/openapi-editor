@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  test:
     name: Test
     runs-on: ubuntu-latest
 
@@ -39,8 +39,9 @@ jobs:
         run: pnpm test
 
   build:
-    name: Build Release (${{ matrix.name }})
-    needs: [check]
+    name: Build - ${{ matrix.name }}
+    needs: [test]
+    if: github.event_name != 'pull_request'
     permissions:
       contents: write
     strategy:
@@ -118,21 +119,21 @@ jobs:
         if: matrix.platform == 'ubuntu-24.04' && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: linux-deb
+          name: openapi-editor_amd64.deb
           path: src-tauri/target/release/bundle/deb/*.deb
 
       - name: Upload Linux .rpm artifact
         if: matrix.platform == 'ubuntu-24.04' && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: linux-rpm
+          name: openapi-editor_x86_64.rpm
           path: src-tauri/target/release/bundle/rpm/*.rpm
 
       - name: Upload Linux AppImage artifact
         if: matrix.platform == 'ubuntu-24.04' && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: linux-appimage
+          name: openapi-editor_amd64.AppImage
           path: src-tauri/target/release/bundle/appimage/*.AppImage
 
       - name: Upload macOS .dmg to release
@@ -157,14 +158,14 @@ jobs:
         if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-15-intel') && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: macos-dmg-${{ matrix.platform == 'macos-latest' && 'arm64' || 'x86_64' }}
+          name: OpenAPI_Editor_${{ matrix.platform == 'macos-latest' && 'aarch64' || 'x64' }}.dmg
           path: src-tauri/target/release/bundle/dmg/*.dmg
 
       - name: Upload macOS .app.tar.gz artifact
         if: (matrix.platform == 'macos-latest' || matrix.platform == 'macos-15-intel') && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: macos-app-${{ matrix.platform == 'macos-latest' && 'arm64' || 'x86_64' }}
+          name: OpenAPI_Editor_${{ matrix.platform == 'macos-latest' && 'aarch64' || 'x64' }}.app.tar.gz
           path: src-tauri/target/release/bundle/macos/*.app.tar.gz
 
       - name: Upload Windows .msi to release
@@ -189,20 +190,20 @@ jobs:
         if: matrix.platform == 'windows-latest' && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: windows-msi
+          name: OpenAPI_Editor_x64_en-US.msi
           path: src-tauri/target/release/bundle/msi/*.msi
 
       - name: Upload Windows .exe artifact
         if: matrix.platform == 'windows-latest' && github.event_name != 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: windows-exe
+          name: OpenAPI_Editor_x64-setup.exe
           path: src-tauri/target/release/bundle/nsis/*.exe
 
   flatpak:
     name: Build Flatpak Bundle
-    if: (github.event_name == 'release') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    needs: [check]
+    if: github.event_name != 'pull_request'
+    needs: [test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -256,5 +257,5 @@ jobs:
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
-          name: flatpak-bundle
+          name: OpenAPI_Editor.flatpak
           path: flatpak/openapi-editor.flatpak
