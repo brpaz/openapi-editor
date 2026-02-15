@@ -47,6 +47,11 @@
     <binary>openapi-editor</binary>
   </provides>
   <releases>
+    <release version="0.1.6" date="2026-02-15">
+      <description>
+        <p># What's Changed * CI Fixes **Full Changelog**: https://github.com/brpaz/openapi-editor/compare/v0.1.5...v0.1.6</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-02-08">
       <description>
         <p>Initial release with core editing features.</p>

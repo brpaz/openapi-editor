@@ -1,6 +1,6 @@
 [package]
 name = "openapi-editor"
-version = "0.1.0"
+version = "0.1.6"
 description = "OpenAPI 3.1 Visual Editor"
 authors = ["bruno"]
 edition = "2021"
