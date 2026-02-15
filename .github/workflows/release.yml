@@ -115,14 +115,14 @@ jobs:
     permissions:
       contents: write
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         settings:
           - name: macOS (ARM64)
             platform: macos-latest
             args: "--target aarch64-apple-darwin"
           - name: macOS (x86_64)
-            platform: macos-latest-intel
+            platform: macos-latest
             args: "--target x86_64-apple-darwin"
           - name: Linux (x86_64)
             platform: ubuntu-24.04
