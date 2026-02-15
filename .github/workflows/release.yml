@@ -84,6 +84,7 @@ jobs:
   version:
     name: Set release versions
     needs: [prepare]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
