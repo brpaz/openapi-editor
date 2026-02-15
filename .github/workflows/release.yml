@@ -181,6 +181,8 @@ jobs:
     name: Build - Flatpak
     needs: [prepare, version]
     runs-on: ubuntu-latest
+    outputs:
+      flatpak_path: ${{ steps.build-flatpak.outputs.flatpak_path }}
     permissions:
       contents: write
     env:
@@ -225,15 +227,19 @@ jobs:
       - run: pnpm run tauri build --no-bundle
 
       - name: Build Flatpak from source
+        id: build-flatpak
         run: |
           cp src-tauri/target/release/openapi-editor flatpak/openapi-editor
           cp src-tauri/icons/128x128.png flatpak/icon-128x128.png
           cp src-tauri/icons/128x128@2x.png flatpak/icon-256x256.png
           flatpak-builder --force-clean --disable-rofiles-fuse --repo=flatpak/repo flatpak/build flatpak/dev.brunopaz.openapi-editor.yml
-          flatpak build-bundle flatpak/repo flatpak/OpenAPI.Editor-${TAG}.flatpakref  dev.brunopaz.openapi-editor
+          VERSION="${TAG#v}"
+          FLATPAK_FILE="flatpak/OpenAPI.Editor-${VERSION}.flatpakref"
+          flatpak build-bundle flatpak/repo "$FLATPAK_FILE" dev.brunopaz.openapi-editor
+          echo "flatpak_path=$FLATPAK_FILE" >> $GITHUB_OUTPUT
 
       - name: Upload Flatpak to release
-        run: gh release upload "$TAG" flatpak/OpenAPI.Editor-${TAG}.flatpakref --clobber
+        run: gh release upload "$TAG" "${{ steps.build-flatpak.outputs.flatpak_path }}" --clobber
 
   commit-release-files:
     name: Commit release files
