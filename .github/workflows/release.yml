@@ -43,8 +43,9 @@ jobs:
         id: get-sha
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
-            SHA="${{ github.event.release.target_commitish }}"
+            SHA="${{ github.sha }}"
           else
+            # For workflow_dispatch, resolve tag to SHA
             SHA=$(git ls-remote https://github.com/${{ github.repository }} refs/tags/${{ steps.resolve-tag.outputs.tag }} | cut -f1)
           fi
           echo "sha=$SHA" >> $GITHUB_OUTPUT
