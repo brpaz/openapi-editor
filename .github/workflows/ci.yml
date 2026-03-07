@@ -62,7 +62,7 @@ jobs:
       - run: pnpm run tauri build --no-bundle
 
       - name: Upload Built Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: src-tauri/target/release/openapi-editor
           path: OpenAPI-Editor
