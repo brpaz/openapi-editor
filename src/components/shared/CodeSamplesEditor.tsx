@@ -61,11 +61,11 @@ function CodeSampleItem({
   const filePath = useSpecStore((state) => state.filePath);
 
   useEffect(() => {
-    if (mode === "ref" && refPath && filePath) {
-      setIsLoadingPreview(true);
-      setPreviewError(null);
+    (async () => {
+      if (mode === "ref" && refPath && filePath) {
+        setIsLoadingPreview(true);
+        setPreviewError(null);
 
-      (async () => {
         try {
           const baseDir = await dirname(filePath);
           const absolutePath = await resolve(baseDir, refPath);
@@ -78,12 +78,12 @@ function CodeSampleItem({
         } finally {
           setIsLoadingPreview(false);
         }
-      })();
-    } else {
-      setPreviewContent(null);
-      setPreviewError(null);
-      setIsLoadingPreview(false);
-    }
+      } else {
+        setPreviewContent(null);
+        setPreviewError(null);
+        setIsLoadingPreview(false);
+      }
+    })();
   }, [mode, refPath, filePath]);
 
   const handleFieldChange = useCallback(
