@@ -1,12 +1,19 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":automergeMinor"],
+  "extends": ["config:best-practices", ":automergeMinor", ":prConcurrentLimit10"],
   "labels": ["dependencies"],
   "reviewers": ["brpaz"],
+  "minimumReleaseAge": "3 days",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
       "matchManagers": ["github-actions"],
-      "groupName": "github-actions"
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "github actions"
     },
     {
       "groupName": "tauri",
@@ -25,6 +32,5 @@
         "@tauri-apps/plugin-opener"
       ]
     }
-  ],
-  "minimumReleaseAge": "3 days"
+  ]
 }
