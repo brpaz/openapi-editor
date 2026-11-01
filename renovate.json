@@ -58,6 +58,12 @@
         "@tauri-apps/plugin-clipboard-manager",
         "@tauri-apps/plugin-opener"
       ]
+    },
+    {
+      "description": "typescript-eslint and the current tsconfig setups do not support TypeScript 7 yet; hold major until they do",
+      "matchPackageNames": ["typescript"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ],
   "lockFileMaintenance": {
